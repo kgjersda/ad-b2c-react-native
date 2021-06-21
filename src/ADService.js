@@ -1,5 +1,7 @@
 /* eslint-disable camelcase */
-import { RequestType } from "./Constants";
+import {
+  RequestType
+} from "./Constants";
 import Result from "./Result";
 
 class ADService {
@@ -67,7 +69,9 @@ class ADService {
     tokenResult && new Date().getTime() < tokenResult.expiresOn * 1000;
 
   getAccessTokenAsync = async () => {
+    console.log("getAccessTokenAsync")
     if (!this._isTokenValid(this.tokenResult)) {
+      console.log("getAccessTokenAsync", "!this._istokenValid")
       const result = await this.fetchAndSetTokenAsync(
         this.tokenResult.refreshToken,
         this.loginPolicy,
@@ -75,10 +79,12 @@ class ADService {
       );
 
       if (!result.isValid) {
+        console.log("getAccessTokenAsync", "!result.isValid")
         return result;
       }
     }
 
+    console.log("getAccessTokenAsync", "return result")
     return Result(
       true,
       `${this.tokenResult.tokenType} ${this.tokenResult.accessToken}`
@@ -88,7 +94,10 @@ class ADService {
   getIdToken = () => this.tokenResult.idToken;
 
   fetchAndSetTokenAsync = async (authCode, policy, isRefreshTokenGrant) => {
+    console.log("fetchAndSetTokenAsync", "start")
+
     if (!authCode) {
+      console.log("fetchAndSetTokenAsync", "!authCode")
       return Result(
         false,
         `Empty ${
@@ -100,16 +109,20 @@ class ADService {
     }
 
     try {
+      console.log("fetchAndSetTokenAsync", "try")
       let body = `client_id=${this.appId}&scope=${this.scope}&redirect_uri=${this.redirectURI}`;
 
       if (isRefreshTokenGrant) {
+        console.log("fetchAndSetTokenAsync", "isRefreshTokenGrant")
         body += "&grant_type=refresh_token";
         body += `&refresh_token=${authCode}`;
       } else {
+        console.log("fetchAndSetTokenAsync", "authcode")
         body += "&grant_type=authorization_code";
         body += `&code=${authCode}`;
       }
 
+      console.log("fetchAndSetTokenAsync", "_getstaticUri")
       const url = this._getStaticURI(policy, "token");
       const response = await fetch(url, {
         method: "POST",
@@ -119,20 +132,29 @@ class ADService {
         body,
       });
 
+      console.log("fetchAndSetTokenAsync", "response")
       if (!response.ok) {
+        console.log("fetchAndSetTokenAsync", "!response.ok")
         const data = await response.json();
         throw new Error(data.error_description);
       }
 
-      await this._setTokenDataAsync(response);
+        console.log("fetchAndSetTokenAsync", "setTokenData")
+        await this._setTokenDataAsync(response);
       return Result(true);
     } catch (error) {
       return Result(false, error.message);
+    } finally {
+      console.log("fetchAndSetTokenAsync end")
+
     }
   };
 
   _setTokenDataAsync = async (response) => {
+    console.log("_setTokenDataAsync", response)
     const res = await response.json();
+    console.log("_setTokenDataAsync",res)
+
     this.tokenResult = {
       tokenType: res.token_type,
       accessToken: res.access_token,
@@ -177,7 +199,10 @@ class ADService {
 
   getLoginFlowResult = (url) => {
     const params = this._getQueryParams(url);
-    const { error_description, code } = params;
+    const {
+      error_description,
+      code
+    } = params;
 
     let data = "";
     if (code) {
@@ -193,10 +218,14 @@ class ADService {
   };
 
   _getRequestType = (
-    url,
-    { error_description, code, post_logout_redirect_uri }
+    url, {
+      error_description,
+      code,
+      post_logout_redirect_uri
+    }
   ) => {
     if (code && url.indexOf(this.redirectURI) > -1) {
+      console.log("_getRequestType", "CODE")
       return RequestType.Code;
     }
 
@@ -228,10 +257,13 @@ class ADService {
     while ((match = regex.exec(url))) {
       params[match[1]] = match[2];
     }
+    console.log("_getQueryParams", params)
     return params;
   };
 }
 
 const adService = new ADService();
 export default adService;
-export { ADService };
+export {
+  ADService
+};
